@@ -47,3 +47,25 @@ def save_object(file_path:str, obj: object)-> None:
         logging.info("Exited the save_object method of MainUtils class")
     except Exception as e:
         raise NetworkSecurityException(e,sys) from e
+
+def load_object(filepath: str)-> object:
+    try:
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"File not found: {filepath}")
+        with open(filepath, "rb") as file_obj:
+            return pickle.load(file_obj)
+    except Exception as e:
+        raise NetworkSecurityException(e,sys) from e
+    
+def load_numpy_array(file_path: str)-> np.array:
+    """
+    load numpy array from file
+    file_path: str: file path to load numpy array
+    return: np.array: numpy array loaded from file
+    """
+
+    try:
+        with open(file_path, "rb") as file:
+            return np.load(file)
+    except Exception as e:
+        raise NetworkSecurityException(e,sys) from e
