@@ -6,9 +6,25 @@ from networksecurity.entity.artifact_entity import ModelTrainerArtifact, DataTra
 from networksecurity.entity.config_entity import ModelTrainerConfig
 
 from networksecurity.utils.main_utils.utils import save_object, load_object
-from networksecurity.utils.main_utils.utils import load_numpy_array
+from networksecurity.utils.main_utils.utils import load_numpy_array, evaluate_models
 from networksecurity.utils.ml_utils.metric.classification_metric import get_classification_score
 from networksecurity.utils.ml_utils.model.estimator import NetworkModel
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier
+)
+
+
+
+
+
+
+
 
 class ModelTrainer:
     def __init__(self, model_trainer_config:ModelTrainerConfig,data_transformation_artifact:DataTransformationArtifact):
@@ -19,15 +35,81 @@ class ModelTrainer:
         except Exception as e:
             raise NetworkSecurityException(e,sys)
         
-    @staticmethod
-    def train_model(x_train, y_train):
+    #@staticmethod
+    def train_model(self,x_train, y_train,x_test,y_test):
         try:
-            from sklearn.ensemble import RandomForestClassifier
-            model = RandomForestClassifier()
-            model.fit(x_train, y_train)
-            return model
+            models = {
+                "Random Forest": RandomForestClassifier(verbose=1),
+                "Decision Tree": DecisionTreeClassifier(),
+                "Gradient Boosting": GradientBoostingClassifier(verbose=1),
+                "Logistic Regression": LogisticRegression(verbose=1),
+                "AdaBoost": AdaBoostClassifier(),
+            }
+
+            params = {
+                "Decision Tree": {
+                    "criterion": ["gini","entropy","log_loss"],
+                    #"splitter": ["best","random"],
+                    #"max_features": ["auto","sqrt","log2"],
+                },
+                "Random Forest":{
+                    "n_estimators": [8,16,32,64,128,256],
+                    #"criterion": ["gini","entropy","log_loss"],
+                    #"max_features": ["None","sqrt","log2"],
+                },
+                "Gradient Boosting":{
+                    "n_estimators": [8,16,32,64,128,256],
+                    "learning_rate": [0.1,0.01,0.05,0.001],
+                    "subsample": [0.6,0.7,0.75,0.8,0.85,0.9]
+                    #"loss": ["deviance","exponential"],
+                    #"max_features": ["None","sqrt","log2"],
+                },
+                "Logistic Regression":{},
+                "AdaBoost":{
+                    "n_estimators": [8,16,32,64,128,256],
+                    "learning_rate": [0.1,0.01,0.05,0.001],
+                }
+
+            }
+
+            model_report:dict=evaluate_models(X_train=x_train,y_train=y_train,X_test=x_test,y_test=y_test,
+                                              models=models,param=params)
+            ## to get best model score from dict
+            best_model_score = max(sorted(model_report.values()))
+
+            # to get the best model name
+            best_model_name = list(model_report.keys())[
+                list(model_report.values()).index(best_model_score)
+            ]
+            best_model = models[best_model_name]
+            y_train_pred = best_model.predict(x_train)
+
+            classification_train_metric=get_classification_score(y_true=y_train,y_pred=y_train_pred)
+            
+            ## Tracking the MLFLOW
+            y_test_pred = best_model.predict(x_test)
+            classification_test_metric=get_classification_score(y_true=y_test,y_pred=y_test_pred)
+            
+            preprocessor = load_object(filepath=self.data_transformation_artifact.transformed_object_file_path)
+
+            model_dir_path = os.path.dirname(self.model_trainer_config.trained_model_file_path)
+            os.makedirs(model_dir_path,exist_ok=True)
+
+            Network_Model = NetworkModel(preprocessor=preprocessor,model=best_model)
+            save_object(self.model_trainer_config.trained_model_file_path,obj=NetworkModel)
+            
+            ## Model Trainer Artifact
+            model_trainer_artifact = ModelTrainerArtifact(trained_model_file_path=self.model_trainer_config.trained_model_file_path,
+                                 train_metric_artifact=classification_train_metric,
+                                 test_metric_artifact=classification_test_metric)
+            
+            logging.info(f"Model Trainer Artifact: {model_trainer_artifact}")
+            return model_trainer_artifact
         except Exception as e:
             raise NetworkSecurityException(e,sys)
+        
+
+
         
     def initiate_model_trainer(self)->ModelTrainerArtifact:
         try:
@@ -45,6 +127,7 @@ class ModelTrainer:
                 test_arr[:, -1],
             )
 
-            model = self.train_model(x_train, y_train)
+            model_trainer_artifact = self.train_model(x_train, y_train,x_test,y_test)
+            return model_trainer_artifact
         except Exception as e:
             raise NetworkSecurityException(e,sys)
