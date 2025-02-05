@@ -22,7 +22,9 @@ from sklearn.ensemble import (
 import mlflow
 from urllib.parse import urlparse
 
-
+# Initialize the DagsHub logger
+import dagshub
+dagshub.init(repo_owner="shubhuu1804", repo_name='NetworkSecurity', mlflow=True)
 
 
 
