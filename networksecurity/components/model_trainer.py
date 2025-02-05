@@ -19,6 +19,10 @@ from sklearn.ensemble import (
     RandomForestClassifier
 )
 
+import mlflow
+from urllib.parse import urlparse
+
+
 
 
 
@@ -34,6 +38,17 @@ class ModelTrainer:
             self.data_transformation_artifact = data_transformation_artifact
         except Exception as e:
             raise NetworkSecurityException(e,sys)
+        
+    def track_mlflow(self,best_model,classificationmetric):
+        with mlflow.start_run():
+            f1_score=classificationmetric.f1_score
+            recall_score = classificationmetric.recall_score
+            precision_score = classificationmetric.precision_score
+
+            mlflow.log_metric("f1_score",f1_score)
+            mlflow.log_metric("recall_score",recall_score)
+            mlflow.log_metric("precision_score",precision_score)
+            mlflow.sklearn.log_model(best_model,"model")
         
     #@staticmethod
     def train_model(self,x_train, y_train,x_test,y_test):
@@ -82,14 +97,17 @@ class ModelTrainer:
                 list(model_report.values()).index(best_model_score)
             ]
             best_model = models[best_model_name]
-            y_train_pred = best_model.predict(x_train)
 
+            y_train_pred = best_model.predict(x_train)
             classification_train_metric=get_classification_score(y_true=y_train,y_pred=y_train_pred)
-            
-            ## Tracking the MLFLOW
+
             y_test_pred = best_model.predict(x_test)
             classification_test_metric=get_classification_score(y_true=y_test,y_pred=y_test_pred)
             
+             ## Tracking the experiments with MLFLOW
+            self.track_mlflow(best_model,classification_train_metric)
+            self.track_mlflow(best_model,classification_test_metric)
+
             preprocessor = load_object(filepath=self.data_transformation_artifact.transformed_object_file_path)
 
             model_dir_path = os.path.dirname(self.model_trainer_config.trained_model_file_path)
