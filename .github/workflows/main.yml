@@ -9,14 +9,14 @@ on:
 
 jobs:
   integration:
-  name: Continuous Integration
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
-    
-    - name: Lint Code
-      run: echo "Linting Repository"
-    
-    - name: Run unit tests
-      run: echo "Running Unit Tests"
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      
+      - name: Lint Code
+        run: echo "Linting Repository"
+      
+      - name: Run unit tests
+        run: echo "Running Unit Tests"
