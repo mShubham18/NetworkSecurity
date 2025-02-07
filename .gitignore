@@ -1,6 +1,6 @@
 venv
 .env
-.github
+
 Artifacts
 logs
 mlruns
