@@ -3,7 +3,7 @@
 Welcome to the **Network Security MLOps** repository, which focuses on **phishing detection, data analysis, and ETL pipelines** for processing network security data.
 
 ## 📱 Working
-![Working Demo](Resources/Working.gif)
+![Working Demo](Resources/working.gif)
 
 
 ## 📌 Overview  
